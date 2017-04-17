@@ -1,0 +1,7 @@
+*.iml
+*.idea*
+mpf-build/
+
+*.pyc
+
+
