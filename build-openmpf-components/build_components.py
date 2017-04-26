@@ -40,6 +40,7 @@ import sys
 
 def main():
     cmdline_args = MpfArgumentParser.parse()
+    print_argument_warnings(cmdline_args)
     sdks = get_sdks(cmdline_args)
     components = ComponentLocator.locate(cmdline_args)
 
@@ -48,8 +49,22 @@ def main():
 
     if not cmdline_args.clean_only:
         ProjectBuilder.build_projects(sdks, components, cmdline_args)
-        if not components:
-            print_warning('No components specified.')
+
+
+
+def print_argument_warnings(cmdline_args):
+    if cmdline_args.clean_only:
+        return
+    if not cmdline_args.cpp_sdk_src:
+        print_warning('MPF C++ Component SDK source path was not provided, so it won\'t be built.')
+    if not cmdline_args.java_sdk_src:
+        print_warning('MPF Java Component SDK source path was not provided, so it won\'t be built.')
+
+    if cmdline_args.mpf_package_json and cmdline_args.components:
+        print_warning('Both a JSON package file and a component list was specified. Only components from the JSON'
+                      ' package file will be built.')
+    if not cmdline_args.mpf_package_json and not cmdline_args.components:
+        print_warning('No components specified.')
 
 
 
@@ -86,44 +101,42 @@ class MpfArgumentParser(argparse.ArgumentParser):
 
 
         self.add_argument(
-            '--cpp-sdk-src', '-csdk',
+            '-csdk', '--cpp-sdk-src',
             help='Path to directory containing the MPF C++ Component SDK project. '
                  'If not provided the C++ SDK will not be built.',
             metavar='<cpp_sdk_path>')
 
 
         self.add_argument(
-            '--java-sdk-src', '-jsdk',
+            '-jsdk', '--java-sdk-src',
             help='Path to directory containing the MPF Java Component SDK project. '
                  'If not provided the Java SDK will not be built.',
             metavar='<java_sdk_path>')
 
         self.add_argument(
-            '--build-dir', '-b',
+            '-b', '--build-dir',
             default='mpf-build',
             help='Path to the directory where build will occur. Defaults to the current directory.',
             metavar='<build_dir>')
 
         self.add_argument(
-            '--component-search-path', '-cp',
+            '-cp', '--component-search-path',
             default='',
             help='Colon separated list containing directories where components can be found. '
                  'Can also be specified through the '
                  'MPF_COMPONENT_SEARCH_PATH environment variable.',
             metavar='<search_paths>')
 
-        component_list_args = self.add_mutually_exclusive_group()
-
-        component_list_args.add_argument(
-            '--components', '-c',
+        self.add_argument(
+            '-c', '--components',
             type=none_when_falsy(),
             help='Colon separated list of components to build. '
                  'May either be full path to component '
                  'or a path relative to a path provided in the component search paths.',
             metavar='<components>')
 
-        component_list_args.add_argument(
-            '--mpf-package-json', '-json',
+        self.add_argument(
+            '-json', '--mpf-package-json',
             type=none_when_falsy(argparse.FileType()),
             help='Path to MPF Package JSON descriptor.',
             metavar='<package_file_path>')
@@ -141,7 +154,7 @@ class MpfArgumentParser(argparse.ArgumentParser):
 
 
         parallel_arg_def = self.add_argument(
-            '--parallel', '-p',
+            '-p', '--parallel',
             nargs='?',  # 0 or 1 arguments can be passed to the parallel option.
             default=1,
             const=float('inf'),  # If parallel option is present, but no number follows
@@ -154,7 +167,7 @@ class MpfArgumentParser(argparse.ArgumentParser):
 
 
         jobs_arg_def = self.add_argument(
-            '--jobs', '-j',
+            '-j', '--jobs',
             nargs='?',
             default=1,
             const=float('inf'),
@@ -184,8 +197,8 @@ class MpfArgumentParser(argparse.ArgumentParser):
         else:
             self.error(
                 'One of the following options must be provided: '
-                '--cpp-sdk-src, --java-sdk-src, --components, --mpf-package-json, '
-                '--clean, or --clean-only')
+                '-csdk, -jsdk, -c, -json, '
+                '--clean, --clean-only, or --help')
 
 
     @staticmethod
@@ -236,14 +249,14 @@ class ComponentLocator(object):
 
     def __init__(self, cmdline_args):
         self._cmdline_args = cmdline_args
-        if cmdline_args.components:
-            self._components = ComponentLocator._split_path_list(cmdline_args.components)
-            self._component_search_paths \
-                = self._get_search_paths(cmdline_args.component_search_path)
-        elif cmdline_args.mpf_package_json is not None:
+        if cmdline_args.mpf_package_json:
             self._components \
                 = ComponentLocator._get_components_listed_in_json(cmdline_args.mpf_package_json)
             self._component_search_paths = ()
+        elif cmdline_args.components:
+            self._components = ComponentLocator._split_path_list(cmdline_args.components)
+            self._component_search_paths \
+                = self._get_search_paths(cmdline_args.component_search_path)
         else:
             self._components = ()
             self._component_search_paths = ()
@@ -498,15 +511,8 @@ def get_sdks(cmdline_args):
     try:
         if cmdline_args.cpp_sdk_src:
             sdks.append(CppSdk(cmdline_args))
-        else:
-            print_warning(
-                'MPF C++ Component SDK source path was not provided, so it won\'t be built.')
-
         if cmdline_args.java_sdk_src:
             sdks.append(JavaSdk(cmdline_args))
-        else:
-            print_warning(
-                'MPF Java Component SDK source path was not provided, so it won\'t be built.')
     except Exception as err:
         sys.exit('Error: ' + err.message)
     return sdks
