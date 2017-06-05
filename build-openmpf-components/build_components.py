@@ -472,11 +472,11 @@ class MavenUtil(object):
     def is_project(src_dir):
         return Files.path_exists(src_dir, 'pom.xml')
 
-    _DO_NOT_RUN_TESTS_ARGS = ('-Dtest=none', '-Dit.test=none', '-DfailIfNoTests=false', '-DskipITs')
+    _SKIP_INTEGRATION_TESTS_ARGS = ('-Dit.test=none', '-DfailIfNoTests=false', '-DskipITs')
 
     @staticmethod
     def _run_maven_phase(phase, src_dir):
-        subprocess.check_call(('mvn', phase) + MavenUtil._DO_NOT_RUN_TESTS_ARGS, cwd=src_dir)
+        subprocess.check_call(('mvn', phase) + MavenUtil._SKIP_INTEGRATION_TESTS_ARGS, cwd=src_dir)
 
     @staticmethod
     def package(src_dir):
