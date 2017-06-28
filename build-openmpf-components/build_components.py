@@ -328,13 +328,13 @@ class ComponentLocator(object):
 
     @staticmethod
     def _get_duplicate_components(components):
-        build_ids = set()
+        src_dirs = set()
         duplicate_components = []
         for component in components:
-            if component.build_id in build_ids:
+            if component.src_dir in src_dirs:
                 duplicate_components.append(component)
             else:
-                build_ids.add(component.build_id)
+                src_dirs.add(component.src_dir)
         return duplicate_components
 
 
@@ -562,7 +562,6 @@ class MpfComponent(MpfProject):
     def __init__(self, src_dir, cmdline_args):
         super(MpfComponent, self).__init__(src_dir)
         self._base_plugin_output_dir = get_plugin_output_dir(cmdline_args)
-        self.build_id = MpfComponent._generate_build_id(src_dir)
 
     @abc.abstractmethod
     def build_package(self):
@@ -573,24 +572,22 @@ class MpfComponent(MpfProject):
         for package in packages:
             shutil.copy(package, self._base_plugin_output_dir)
 
-    @staticmethod
-    def _generate_build_id(src_dir):
-        parents, base_name = os.path.split(src_dir)
-        parent_dir_name = os.path.basename(parents)
-        return parent_dir_name + '-' + base_name + '-build'
-
 
 
 class CppComponent(MpfComponent):
     def __init__(self, component_src_dir, cmdline_args):
         super(CppComponent, self).__init__(component_src_dir, cmdline_args)
-        self._component_build_dir = os.path.join(cmdline_args.build_dir, self.build_id)
+        self._component_build_dir = os.path.join(cmdline_args.build_dir, self._generate_build_dir_name())
         self._num_make_jobs = cmdline_args.jobs
 
 
     def build_package(self):
         CmakeUtil.build(self._component_build_dir, self.src_dir, self._num_make_jobs)
         return Files.list_component_packages(self._component_build_dir)
+
+    def _generate_build_dir_name(self):
+        path_no_leading_slash = self.src_dir[1:]
+        return path_no_leading_slash.replace('/', '-') + '-build'
 
 
 
