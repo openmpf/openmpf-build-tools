@@ -42,7 +42,7 @@ def main():
     global new_version
 
     if (len(sys.argv) != 3):
-        print "Usage: " + os.path.basename(__file__) + " <old_version_str> <new_version_str>"
+        print "Usage: " + sys.argv[0] + " <old_version_str> <new_version_str>"
         return -1
 
     old_version = sys.argv[1]
