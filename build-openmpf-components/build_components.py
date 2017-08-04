@@ -7,11 +7,11 @@
 # under contract, and is subject to the Rights in Data-General Clause       #
 # 52.227-14, Alt. IV (DEC 2007).                                            #
 #                                                                           #
-# Copyright 2016 The MITRE Corporation. All Rights Reserved.                #
+# Copyright 2017 The MITRE Corporation. All Rights Reserved.                #
 #############################################################################
 
 #############################################################################
-# Copyright 2016 The MITRE Corporation                                      #
+# Copyright 2017 The MITRE Corporation                                      #
 #                                                                           #
 # Licensed under the Apache License, Version 2.0 (the "License");           #
 # you may not use this file except in compliance with the License.          #
@@ -328,13 +328,13 @@ class ComponentLocator(object):
 
     @staticmethod
     def _get_duplicate_components(components):
-        build_ids = set()
+        src_dirs = set()
         duplicate_components = []
         for component in components:
-            if component.build_id in build_ids:
+            if component.src_dir in src_dirs:
                 duplicate_components.append(component)
             else:
-                build_ids.add(component.build_id)
+                src_dirs.add(component.src_dir)
         return duplicate_components
 
 
@@ -465,6 +465,14 @@ class CmakeUtil(object):
                 print 'Deleting', package
                 os.remove(package)
 
+    @staticmethod
+    def generate_build_path(base_build_dir, src_dir):
+        path_no_leading_slash = src_dir[1:]
+        build_dir_name = path_no_leading_slash.replace('/', '-') + '-build'
+        return os.path.join(base_build_dir, build_dir_name)
+
+
+
 
 
 class MavenUtil(object):
@@ -472,11 +480,11 @@ class MavenUtil(object):
     def is_project(src_dir):
         return Files.path_exists(src_dir, 'pom.xml')
 
-    _DO_NOT_RUN_TESTS_ARGS = ('-Dtest=none', '-Dit.test=none', '-DfailIfNoTests=false', '-DskipITs')
+    _SKIP_INTEGRATION_TESTS_ARGS = ('-Dit.test=none', '-DfailIfNoTests=false', '-DskipITs')
 
     @staticmethod
     def _run_maven_phase(phase, src_dir):
-        subprocess.check_call(('mvn', phase) + MavenUtil._DO_NOT_RUN_TESTS_ARGS, cwd=src_dir)
+        subprocess.check_call(('mvn', phase) + MavenUtil._SKIP_INTEGRATION_TESTS_ARGS, cwd=src_dir)
 
     @staticmethod
     def package(src_dir):
@@ -522,7 +530,7 @@ def get_sdks(cmdline_args):
 class CppSdk(MpfProject):
     def __init__(self, cmdline_args):
         super(CppSdk, self).__init__(cmdline_args.cpp_sdk_src)
-        self._base_build_dir = cmdline_args.build_dir
+        self._sdk_build_dir = CmakeUtil.generate_build_path(cmdline_args.build_dir, self.src_dir)
         self._num_make_jobs = cmdline_args.jobs
         if not CmakeUtil.is_project(self.src_dir):
             raise Exception(
@@ -530,8 +538,7 @@ class CppSdk(MpfProject):
                 % self.src_dir)
 
     def build(self):
-        sdk_build_dir = os.path.join(self._base_build_dir, 'openmpf-cpp-component-sdk-build')
-        CmakeUtil.build(sdk_build_dir, self.src_dir, self._num_make_jobs)
+        CmakeUtil.build(self._sdk_build_dir, self.src_dir, self._num_make_jobs)
 
 
 class JavaSdk(MpfProject):
@@ -562,7 +569,6 @@ class MpfComponent(MpfProject):
     def __init__(self, src_dir, cmdline_args):
         super(MpfComponent, self).__init__(src_dir)
         self._base_plugin_output_dir = get_plugin_output_dir(cmdline_args)
-        self.build_id = MpfComponent._generate_build_id(src_dir)
 
     @abc.abstractmethod
     def build_package(self):
@@ -573,24 +579,20 @@ class MpfComponent(MpfProject):
         for package in packages:
             shutil.copy(package, self._base_plugin_output_dir)
 
-    @staticmethod
-    def _generate_build_id(src_dir):
-        parents, base_name = os.path.split(src_dir)
-        parent_dir_name = os.path.basename(parents)
-        return parent_dir_name + '-' + base_name + '-build'
-
 
 
 class CppComponent(MpfComponent):
     def __init__(self, component_src_dir, cmdline_args):
         super(CppComponent, self).__init__(component_src_dir, cmdline_args)
-        self._component_build_dir = os.path.join(cmdline_args.build_dir, self.build_id)
+        self._component_build_dir = CmakeUtil.generate_build_path(cmdline_args.build_dir, self.src_dir)
         self._num_make_jobs = cmdline_args.jobs
 
 
     def build_package(self):
         CmakeUtil.build(self._component_build_dir, self.src_dir, self._num_make_jobs)
         return Files.list_component_packages(self._component_build_dir)
+
+
 
 
 
