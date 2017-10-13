@@ -56,6 +56,7 @@ def main():
     replace_version("echo \\\"                           Installing OpenMPF ", "trunk/ansible/install-mpf.sh")
     replace_version("my \$mpfVersion = \\\"", "trunk/jenkins/scripts/CreateCustomPackage.pl")
     replace_version("mpf.version.semantic=", "trunk/workflow-manager/src/main/resources/properties/mpf.properties")
+    replace_version("        replace: 'mpf-markup-", "trunk/ansible/install/ansible/mpf-master.yml")
 
 
     if not updated_files:
@@ -74,6 +75,8 @@ def replace_version(line_starts_with, file_path):
         os.system("echo \"" + search_str + "\"")
         print
         return
+
+    line_starts_with = line_starts_with.replace("'", "\\x27");
 
     replace_command = "sed -i '/^" + line_starts_with + "/s/" + old_version + "/" + new_version + "/' " + file_path
     # print replace_command # DEBUG
