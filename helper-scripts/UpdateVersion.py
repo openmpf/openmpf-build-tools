@@ -74,7 +74,7 @@ def replace_version(line_starts_with, file_path):
     if (os.system(search_command + " -q") != 0):
         print "Could not find search string. Command failed:\n" + search_command
         print
-        #return
+        return
 
     replace_line_starts_with = line_starts_with.replace("'", "\\x27");
     replace_command = "sed -i '/^" + replace_line_starts_with + "/s/" + old_version + "/" + new_version + "/' " + file_path
