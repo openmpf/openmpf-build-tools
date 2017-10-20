@@ -56,7 +56,7 @@ def main():
     replace_version("echo \\\"                           Installing OpenMPF ", "trunk/ansible/install-mpf.sh")
     replace_version("my \$mpfVersion = \\\"", "trunk/jenkins/scripts/CreateCustomPackage.pl")
     replace_version("mpf.version.semantic=", "trunk/workflow-manager/src/main/resources/properties/mpf.properties")
-    replace_version("        replace: 'mpf-markup-", "trunk/ansible/install/ansible/mpf-master.yml")
+    replace_version("        line: '\\\\1mpf-markup-", "trunk/ansible/install/ansible/mpf-master.yml")
 
 
     if not updated_files:
@@ -67,23 +67,21 @@ def main():
 
 
 def replace_version(line_starts_with, file_path):
-    search_str = line_starts_with + old_version
-    search_command = "grep -q \"" + search_str + "\" " + file_path
+    search_line_starts_with = line_starts_with.replace("\\\\", "\\\\\\");
+    search_str = search_line_starts_with + old_version
+    search_command = "grep \"" + search_str + "\" " + file_path
     # print search_command # DEBUG
-    if (os.system(search_command) != 0):
-        print "Could not find search string in " + file_path + ":"
-        os.system("echo \"" + search_str + "\"")
+    if (os.system(search_command + " -q") != 0):
+        print "Could not find search string. Command failed:\n" + search_command
         print
-        return
+        #return
 
-    line_starts_with = line_starts_with.replace("'", "\\x27");
-
-    replace_command = "sed -i '/^" + line_starts_with + "/s/" + old_version + "/" + new_version + "/' " + file_path
+    replace_line_starts_with = line_starts_with.replace("'", "\\x27");
+    replace_command = "sed -i '/^" + replace_line_starts_with + "/s/" + old_version + "/" + new_version + "/' " + file_path
     # print replace_command # DEBUG
     exit_code = os.system(replace_command)
     if (exit_code != 0):
-        print "Could not replace search string in " + file_path + ":"
-        os.system("echo \"" + search_str + "\"")
+        print "Could not replace search string. Command failed:\n" + replace_command
         # print "Command returned exit code " + str(exit_code) # DEBUG
         print
         return
