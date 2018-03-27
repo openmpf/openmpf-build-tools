@@ -57,6 +57,7 @@ def main():
     replace_version("my \$mpfVersion = \\\"", "trunk/jenkins/scripts/CreateCustomPackage.pl")
     replace_version("mpf.version.semantic=", "trunk/workflow-manager/src/main/resources/properties/mpf.properties")
     replace_version("        line: '\\\\1mpf-markup-", "trunk/ansible/install/ansible/mpf-master.yml")
+    replace_version("                 version='", "trunk/bin/mpf-scripts/setup.py")
 
 
     if not updated_files:
