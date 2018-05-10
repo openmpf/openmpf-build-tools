@@ -51,6 +51,10 @@
         {
             "name": "CaffeDetection",
             "path": "../../openmpf-components/cpp/CaffeDetection"
+        },
+        {
+            "name": "PythonTestComponent",
+            "path": "../../openmpf-python-component-sdk/examples/PythonTestComponent"
         }
     ]
 }

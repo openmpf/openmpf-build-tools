@@ -36,6 +36,7 @@ import os
 import shutil
 import subprocess
 import sys
+import tarfile
 
 
 def main():
@@ -59,6 +60,8 @@ def print_argument_warnings(cmdline_args):
         print_warning('MPF C++ Component SDK source path was not provided, so it won\'t be built.')
     if not cmdline_args.java_sdk_src:
         print_warning('MPF Java Component SDK source path was not provided, so it won\'t be built.')
+    if not cmdline_args.python_sdk_src:
+        print_warning('MPF Python Component SDK source path was not provided, so it won\'t be built.')
 
     if cmdline_args.mpf_package_json and cmdline_args.components:
         print_warning('Both a JSON package file and a component list was specified. Only components from the JSON'
@@ -112,6 +115,14 @@ class MpfArgumentParser(argparse.ArgumentParser):
             help='Path to directory containing the MPF Java Component SDK project. '
                  'If not provided the Java SDK will not be built.',
             metavar='<java_sdk_path>')
+
+
+        self.add_argument(
+            '-psdk', '--python-sdk-src',
+            help='Path to directory containing the MPF Python Component SDK project. '
+                 'If not provided the Python SDK will not be built.',
+            metavar='<python_sdk_path>')
+
 
         self.add_argument(
             '-b', '--build-dir',
@@ -191,13 +202,13 @@ class MpfArgumentParser(argparse.ArgumentParser):
     def parse_args(self, arg_strings=sys.argv[1:], namespace=None):
         arg_strings = MpfArgumentParser._expand_path_tilde(arg_strings)
         args = super(MpfArgumentParser, self).parse_args(arg_strings, namespace)
-        if args.cpp_sdk_src or args.java_sdk_src or args.components or args.mpf_package_json \
+        if args.cpp_sdk_src or args.java_sdk_src or args.python_sdk_src or args.components or args.mpf_package_json \
                 or args.clean or args.clean_only:
             return args
         else:
             self.error(
                 'One of the following options must be provided: '
-                '-csdk, -jsdk, -c, -json, '
+                '-csdk, -jsdk, -psdk, -c, -json, '
                 '--clean, --clean-only, or --help')
 
 
@@ -241,7 +252,7 @@ class MapShortOptionsGroup(argparse.Action):
 
 
 class ComponentLocator(object):
-    LANG_DIRS = ('cpp', 'java')
+    LANG_DIRS = ('cpp', 'java', 'python')
 
     @staticmethod
     def locate(cmdline_args):
@@ -473,8 +484,6 @@ class CmakeUtil(object):
 
 
 
-
-
 class MavenUtil(object):
     @staticmethod
     def is_project(src_dir):
@@ -502,11 +511,37 @@ class MavenUtil(object):
 
 
 
+class PipUtil(object):
+    @staticmethod
+    def has_setup_py_file(src_dir):
+        return Files.path_exists(src_dir, 'setup.py')
+
+    @staticmethod
+    def is_component(src_dir):
+        return PipUtil.has_setup_py_file(src_dir) or PipUtil._descriptor_lang_matches(src_dir)
+
+    @staticmethod
+    def _descriptor_lang_matches(src_dir):
+        try:
+            with open(os.path.join(src_dir, 'descriptor', 'descriptor.json')) as f:
+                descriptor_json = json.load(f)
+                return descriptor_json.get('sourceLanguage', '').lower() == 'python'
+        except IOError:
+            return False
+
+    @staticmethod
+    def clean(src_dir):
+        if PipUtil.has_setup_py_file(src_dir):
+            print 'Cleaning ', src_dir
+            subprocess.check_call(('python', 'setup.py', 'clean'), cwd=src_dir)
+
+
+
 class MpfProject(object):
     __metaclass__ = abc.ABCMeta
 
     def __init__(self, src_dir):
-        self.src_dir = os.path.abspath(src_dir)
+        self.src_dir = os.path.abspath(Files.expand_path(src_dir))
 
     @abc.abstractmethod
     def build(self):
@@ -521,6 +556,8 @@ def get_sdks(cmdline_args):
             sdks.append(CppSdk(cmdline_args))
         if cmdline_args.java_sdk_src:
             sdks.append(JavaSdk(cmdline_args))
+        if cmdline_args.python_sdk_src:
+            sdks.append(PythonSdk(cmdline_args))
     except Exception as err:
         sys.exit('Error: ' + err.message)
     return sdks
@@ -534,7 +571,7 @@ class CppSdk(MpfProject):
         self._num_make_jobs = cmdline_args.jobs
         if not CmakeUtil.is_project(self.src_dir):
             raise Exception(
-                'Unable to build C++ SDK because %s does not appear to be a CMake project'
+                'Unable to build C++ SDK because %s does not appear to be a CMake project.'
                 % self.src_dir)
 
     def build(self):
@@ -546,11 +583,25 @@ class JavaSdk(MpfProject):
         super(JavaSdk, self).__init__(cmdline_args.java_sdk_src)
         if not MavenUtil.is_project(self.src_dir):
             raise Exception(
-                'Unable to build Java SDK because %s does not appear to be a Maven project'
+                'Unable to build Java SDK because %s does not appear to be a Maven project.'
                 % self.src_dir)
 
     def build(self):
         MavenUtil.install(self.src_dir)
+
+
+class PythonSdk(MpfProject):
+    def __init__(self, cmdline_args):
+        super(PythonSdk, self).__init__(cmdline_args.python_sdk_src)
+        if not PipUtil.has_setup_py_file(self.src_dir):
+            raise Exception(
+                'Unable to build Python SDK because %s does not contain a setup.py file.'
+                % self.src_dir)
+
+    def build(self):
+        mpf_sdk_install_path = Files.expand_path(os.getenv('MPF_SDK_INSTALL_PATH', '~/mpf-sdk-install'))
+        python_sdk_install_path = os.path.join(mpf_sdk_install_path, 'python', 'site-packages')
+        subprocess.check_call(('pip', 'install', '--upgrade', '--target', python_sdk_install_path, self.src_dir))
 
 
 
@@ -563,12 +614,14 @@ class MpfComponent(MpfProject):
             return CppComponent(src_dir, cmdline_args)
         elif MavenUtil.is_project(src_dir):
             return JavaComponent(src_dir, cmdline_args)
+        elif PipUtil.is_component(src_dir):
+            return PythonComponent(src_dir, cmdline_args)
         else:
             return None
 
     def __init__(self, src_dir, cmdline_args):
         super(MpfComponent, self).__init__(src_dir)
-        self._base_plugin_output_dir = get_plugin_output_dir(cmdline_args)
+        self.base_plugin_output_dir = get_plugin_output_dir(cmdline_args)
 
     @abc.abstractmethod
     def build_package(self):
@@ -577,7 +630,7 @@ class MpfComponent(MpfProject):
     def build(self):
         packages = self.build_package()
         for package in packages:
-            shutil.copy(package, self._base_plugin_output_dir)
+            shutil.copy(package, self.base_plugin_output_dir)
 
 
 
@@ -591,9 +644,6 @@ class CppComponent(MpfComponent):
     def build_package(self):
         CmakeUtil.build(self._component_build_dir, self.src_dir, self._num_make_jobs)
         return Files.list_component_packages(self._component_build_dir)
-
-
-
 
 
 class JavaComponent(MpfComponent):
@@ -627,6 +677,22 @@ class JavaComponent(MpfComponent):
 
 
 
+class PythonComponent(MpfComponent):
+    def __init__(self, component_src_dir, cmdline_args):
+        super(PythonComponent, self).__init__(component_src_dir, cmdline_args)
+
+    def build_package(self):
+        if PipUtil.has_setup_py_file(self.src_dir):
+            # TODO: Call pip wheel
+            # subprocess.check_call(('pip', 'wheel', '--wheel-dir', 'path/to/wheelhouse', self.src_dir))
+            raise NotImplementedError('setup.py for components not yet implemented')
+        else:
+            Files.tar_directory(self.src_dir, self.base_plugin_output_dir)
+            return ()  # Builds package in place, no need to copy
+
+
+
+
 def get_plugin_output_dir(cmdline_args):
     return os.path.join(cmdline_args.build_dir, 'plugin-packages')
 
@@ -651,6 +717,20 @@ class Files(object):
     def list_component_packages(path, *paths):
         directory = os.path.join(path, *paths)
         return glob.glob(os.path.join(directory, 'plugin-packages', '*.tar.gz'))
+
+    @staticmethod
+    def expand_path(path):
+        return os.path.expanduser(os.path.expandvars(path))
+
+    @staticmethod
+    def tar_directory(input_dir, output_dir):
+        input_dir = input_dir.rstrip('/')
+        leaf_dir = os.path.basename(input_dir)
+        tar_full_path = os.path.join(output_dir, leaf_dir + '.tar.gz')
+        with tarfile.open(tar_full_path, 'w:gz') as tar:
+            tar.add(input_dir, arcname=leaf_dir)
+
+
 
 
 
