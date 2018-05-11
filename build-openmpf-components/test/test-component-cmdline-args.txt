@@ -3,12 +3,12 @@
 --java-sdk-src
 ../../openmpf-java-component-sdk
 -psdk
-../../openmpf-python-component-sdk/api
+../../openmpf-python-component-sdk
 -b
 /home/mpf/test-mpf-build
 -cp
 /tmp/nothing:../../openmpf-components:../..
 -c
-cpp/OcvFaceDetection/:DlibFaceDetection:OalprLicensePlateTextDetection:openmpf-contrib-components:SphinxSpeechDetection:openmpf-python-component-sdk/examples/PythonTestComponent
+cpp/OcvFaceDetection/:DlibFaceDetection:OalprLicensePlateTextDetection:openmpf-contrib-components:SphinxSpeechDetection:openmpf-python-component-sdk/detection/examples/PythonTestComponent
 -jp
 2

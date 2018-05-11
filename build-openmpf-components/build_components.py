@@ -592,7 +592,9 @@ class JavaSdk(MpfProject):
 
 class PythonSdk(MpfProject):
     def __init__(self, cmdline_args):
-        super(PythonSdk, self).__init__(cmdline_args.python_sdk_src)
+        super(PythonSdk, self).__init__(
+            os.path.join(cmdline_args.python_sdk_src, 'detection', 'api')
+        )
         if not PipUtil.has_setup_py_file(self.src_dir):
             raise Exception(
                 'Unable to build Python SDK because %s does not contain a setup.py file.'

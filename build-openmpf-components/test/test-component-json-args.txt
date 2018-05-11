@@ -1,6 +1,6 @@
 --cpp-sdk-src=../../openmpf-cpp-component-sdk
 --java-sdk-src=../../openmpf-java-component-sdk
---python-sdk-src=../../openmpf-python-component-sdk/api
+--python-sdk-src=../../openmpf-python-component-sdk
 --build-dir=/home/mpf/test-mpf-build
 --mpf-package-json=test/test-mpf-package.json
 --parallel=2
