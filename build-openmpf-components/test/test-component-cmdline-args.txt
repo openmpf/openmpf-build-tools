@@ -7,8 +7,8 @@
 -b
 /home/mpf/test-mpf-build
 -cp
-/tmp/nothing:../../openmpf-components:../..
+/tmp/nothing:../../openmpf-components:../..:../../openmpf-python-component-sdk/detection/examples
 -c
-cpp/OcvFaceDetection/:DlibFaceDetection:OalprLicensePlateTextDetection:openmpf-contrib-components:SphinxSpeechDetection:openmpf-python-component-sdk/detection/examples/PythonTestComponent
+cpp/OcvFaceDetection/:DlibFaceDetection:OalprLicensePlateTextDetection:openmpf-contrib-components:SphinxSpeechDetection:PythonTestComponent:PythonOcvComponent
 -jp
 2
