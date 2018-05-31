@@ -59,6 +59,10 @@
         {
             "name": "PythonTestComponent",
             "path": "../../openmpf-python-component-sdk/detection/examples/PythonTestComponent"
+        },
+        {
+            "name": "PythonOcvComponent",
+            "path": "../../openmpf-python-component-sdk/detection/examples/PythonOcvComponent"
         }
     ]
 }

@@ -28,6 +28,7 @@
 
 import abc
 import argparse
+import contextlib
 import glob
 import json
 import multiprocessing
@@ -37,6 +38,7 @@ import shutil
 import subprocess
 import sys
 import tarfile
+import tempfile
 
 
 def main():
@@ -535,6 +537,19 @@ class PipUtil(object):
             print 'Cleaning ', src_dir
             subprocess.check_call(('python', 'setup.py', 'clean'), cwd=src_dir)
 
+    @staticmethod
+    def _get_sdk_install_root():
+        return os.path.join(Files.get_sdk_install_path(), 'python')
+
+    @staticmethod
+    def get_sdk_wheelhouse():
+        return os.path.join(PipUtil._get_sdk_install_root(), 'wheelhouse')
+
+    @staticmethod
+    def get_sdk_installed_packages():
+        return os.path.join(PipUtil._get_sdk_install_root(), 'site-packages')
+
+
 
 
 class MpfProject(object):
@@ -601,9 +616,10 @@ class PythonSdk(MpfProject):
                 % self.src_dir)
 
     def build(self):
-        mpf_sdk_install_path = Files.expand_path(os.getenv('MPF_SDK_INSTALL_PATH', '~/mpf-sdk-install'))
-        python_sdk_install_path = os.path.join(mpf_sdk_install_path, 'python', 'site-packages')
-        subprocess.check_call(('pip', 'install', '--upgrade', '--target', python_sdk_install_path, self.src_dir))
+        subprocess.check_call(('pip', 'wheel', '--wheel-dir', PipUtil.get_sdk_wheelhouse(), self.src_dir))
+
+        subprocess.check_call(('pip', 'install', '--upgrade', '--target', PipUtil.get_sdk_installed_packages(),
+                               self.src_dir))
 
 
 
@@ -685,9 +701,20 @@ class PythonComponent(MpfComponent):
 
     def build_package(self):
         if PipUtil.has_setup_py_file(self.src_dir):
-            # TODO: Call pip wheel
-            # subprocess.check_call(('pip', 'wheel', '--wheel-dir', 'path/to/wheelhouse', self.src_dir))
-            raise NotImplementedError('setup.py for components not yet implemented')
+            leaf_dir = Files.get_leaf(self.src_dir)
+            with Files.create_temp_dir() as temp_path:
+                wheelhouse = os.path.join(temp_path, 'wheelhouse')
+                subprocess.check_call((
+                    'pip', 'wheel',
+                    '--wheel-dir', wheelhouse,
+                    '--find-links', PipUtil.get_sdk_wheelhouse(),
+                    self.src_dir))
+
+                with tarfile.open(os.path.join(self.base_plugin_output_dir, leaf_dir + '.tar.gz'), 'w:gz') as tar:
+                    tar.add(os.path.join(self.src_dir, 'plugin-files'), arcname=leaf_dir)
+                    tar.add(wheelhouse, arcname=os.path.join(leaf_dir, 'wheelhouse'))
+
+                return ()  # Builds package in place, no need to copy
         else:
             Files.tar_directory(self.src_dir, self.base_plugin_output_dir)
             return ()  # Builds package in place, no need to copy
@@ -726,13 +753,28 @@ class Files(object):
 
     @staticmethod
     def tar_directory(input_dir, output_dir):
-        input_dir = input_dir.rstrip('/')
-        leaf_dir = os.path.basename(input_dir)
+        leaf_dir = Files.get_leaf(input_dir)
         tar_full_path = os.path.join(output_dir, leaf_dir + '.tar.gz')
         with tarfile.open(tar_full_path, 'w:gz') as tar:
             tar.add(input_dir, arcname=leaf_dir)
 
+    @staticmethod
+    def get_sdk_install_path():
+        return Files.expand_path(os.getenv('MPF_SDK_INSTALL_PATH', '~/mpf-sdk-install'))
 
+    @staticmethod
+    def get_leaf(path):
+        path.rstrip('/')
+        return os.path.basename(path)
+
+    @staticmethod
+    @contextlib.contextmanager
+    def create_temp_dir():
+        name = tempfile.mkdtemp()  # Create the temp directory when entering "with" block
+        try:
+            yield name  # Make path to temp dir available through "with" statement's "as" variable
+        finally:
+            shutil.rmtree(name)  # Delete the temp directory when exiting "with" block
 
 
 
