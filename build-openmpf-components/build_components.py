@@ -608,18 +608,20 @@ class JavaSdk(MpfProject):
 class PythonSdk(MpfProject):
     def __init__(self, cmdline_args):
         super(PythonSdk, self).__init__(
-            os.path.join(cmdline_args.python_sdk_src, 'detection', 'api')
+            os.path.join(cmdline_args.python_sdk_src, 'detection')
         )
-        if not PipUtil.has_setup_py_file(self.src_dir):
-            raise Exception(
-                'Unable to build Python SDK because %s does not contain a setup.py file.'
-                % self.src_dir)
+        self.packages = [os.path.join(self.src_dir, d) for d in ('api', 'component_util')]
+        for package in self.packages:
+            if not PipUtil.has_setup_py_file(package):
+                raise Exception(
+                    'Unable to build Python SDK because %s does not contain a setup.py file.'
+                    % package)
 
     def build(self):
-        subprocess.check_call(('pip', 'wheel', '--wheel-dir', PipUtil.get_sdk_wheelhouse(), self.src_dir))
-
-        subprocess.check_call(('pip', 'install', '--upgrade', '--target', PipUtil.get_sdk_installed_packages(),
-                               self.src_dir))
+        for package in self.packages:
+            subprocess.check_call(('pip', 'wheel', '--wheel-dir', PipUtil.get_sdk_wheelhouse(), package))
+            subprocess.check_call(('pip', 'install', '--upgrade', '--target', PipUtil.get_sdk_installed_packages(),
+                                   package))
 
 
 
