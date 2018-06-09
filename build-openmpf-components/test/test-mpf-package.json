@@ -51,6 +51,18 @@
         {
             "name": "CaffeDetection",
             "path": "../../openmpf-components/cpp/CaffeDetection"
+        },
+        {
+            "name": "DarknetDetection",
+            "path": "../../openmpf-components/cpp/DarknetDetection"
+        },
+        {
+            "name": "PythonTestComponent",
+            "path": "../../openmpf-python-component-sdk/detection/examples/PythonTestComponent"
+        },
+        {
+            "name": "PythonOcvComponent",
+            "path": "../../openmpf-python-component-sdk/detection/examples/PythonOcvComponent"
         }
     ]
 }
