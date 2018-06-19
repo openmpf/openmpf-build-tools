@@ -53,7 +53,7 @@ def main():
     # Add new files here
     ############################################################
 
-    replace_version("echo \\\"                           Installing OpenMPF ", "trunk/ansible/install-mpf.sh")
+    replace_version("echo \\\"                            Installing OpenMPF ", "trunk/ansible/install-mpf.sh")
     replace_version("my \$mpfVersion = \\\"", "trunk/jenkins/scripts/CreateCustomPackage.pl")
     replace_version("mpf.version.semantic=", "trunk/workflow-manager/src/main/resources/properties/mpf.properties")
     replace_version("        line: '\\\\1mpf-markup-", "trunk/ansible/install/ansible/mpf-master.yml")
