@@ -619,9 +619,11 @@ class PythonSdk(MpfProject):
 
     def build(self):
         for package in self.packages:
-            subprocess.check_call(('pip', 'wheel', '--wheel-dir', PipUtil.get_sdk_wheelhouse(), package))
+            subprocess.check_call(('pip', 'wheel', '--wheel-dir', PipUtil.get_sdk_wheelhouse(),
+                                   '--find-links', PipUtil.get_sdk_wheelhouse(), package))
+
             subprocess.check_call(('pip', 'install', '--upgrade', '--target', PipUtil.get_sdk_installed_packages(),
-                                   package))
+                                   '--find-links', PipUtil.get_sdk_wheelhouse(), package))
 
 
 
