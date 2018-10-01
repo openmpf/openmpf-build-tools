@@ -707,16 +707,22 @@ class PythonComponent(MpfComponent):
         if PipUtil.has_setup_py_file(self.src_dir):
             leaf_dir = Files.get_leaf(self.src_dir)
             with Files.create_temp_dir() as temp_path:
-                wheelhouse = os.path.join(temp_path, 'wheelhouse')
-                subprocess.check_call((
-                    'pip', 'wheel',
-                    '--wheel-dir', wheelhouse,
-                    '--find-links', PipUtil.get_sdk_wheelhouse(),
-                    self.src_dir))
+                download_target_wheelhouse = os.path.join(temp_path, 'wheelhouse')
+
+                pip_args = ['pip', 'wheel', self.src_dir,
+                            '--process-dependency-links',
+                            '--wheel-dir', download_target_wheelhouse,
+                            '--find-links', PipUtil.get_sdk_wheelhouse()]
+
+                plugin_provided_wheelhouse = os.path.join(self.src_dir, 'plugin-files', 'wheelhouse')
+                if os.path.exists(plugin_provided_wheelhouse):
+                    pip_args += ('--find-links', plugin_provided_wheelhouse)
+
+                subprocess.check_call(pip_args)
 
                 with tarfile.open(os.path.join(self.base_plugin_output_dir, leaf_dir + '.tar.gz'), 'w:gz') as tar:
                     tar.add(os.path.join(self.src_dir, 'plugin-files'), arcname=leaf_dir)
-                    tar.add(wheelhouse, arcname=os.path.join(leaf_dir, 'wheelhouse'))
+                    tar.add(download_target_wheelhouse, arcname=os.path.join(leaf_dir, 'wheelhouse'))
 
                 return ()  # Builds package in place, no need to copy
         else:
