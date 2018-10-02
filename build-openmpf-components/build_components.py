@@ -705,31 +705,49 @@ class PythonComponent(MpfComponent):
 
     def build_package(self):
         if PipUtil.has_setup_py_file(self.src_dir):
-            leaf_dir = Files.get_leaf(self.src_dir)
-            with Files.create_temp_dir() as temp_path:
-                download_target_wheelhouse = os.path.join(temp_path, 'wheelhouse')
-
-                pip_args = ['pip', 'wheel', self.src_dir,
-                            '--process-dependency-links',
-                            '--wheel-dir', download_target_wheelhouse,
-                            '--find-links', PipUtil.get_sdk_wheelhouse()]
-
-                plugin_provided_wheelhouse = os.path.join(self.src_dir, 'plugin-files', 'wheelhouse')
-                if os.path.exists(plugin_provided_wheelhouse):
-                    pip_args += ('--find-links', plugin_provided_wheelhouse)
-
-                subprocess.check_call(pip_args)
-
-                with tarfile.open(os.path.join(self.base_plugin_output_dir, leaf_dir + '.tar.gz'), 'w:gz') as tar:
-                    tar.add(os.path.join(self.src_dir, 'plugin-files'), arcname=leaf_dir)
-                    tar.add(download_target_wheelhouse, arcname=os.path.join(leaf_dir, 'wheelhouse'))
-
-                return ()  # Builds package in place, no need to copy
+            return self._build_setuptools_component()
         else:
             Files.tar_directory(self.src_dir, self.base_plugin_output_dir)
             return ()  # Builds package in place, no need to copy
 
+    def _build_setuptools_component(self):
+        leaf_dir = Files.get_leaf(self.src_dir)
+        with Files.create_temp_dir() as temp_path:
+            download_target_wheelhouse = os.path.join(temp_path, 'wheelhouse')
 
+            pip_args = ['pip', 'wheel', self.src_dir,
+                        '--process-dependency-links',
+                        '--wheel-dir', download_target_wheelhouse,
+                        '--find-links', PipUtil.get_sdk_wheelhouse()]
+
+            plugin_provided_wheelhouse = os.path.join(self.src_dir, 'plugin-files', 'wheelhouse')
+            if os.path.exists(plugin_provided_wheelhouse):
+                pip_args += ('--find-links', plugin_provided_wheelhouse)
+
+            subprocess.check_call(pip_args)
+
+            with tarfile.open(os.path.join(self.base_plugin_output_dir, leaf_dir + '.tar.gz'), 'w:gz') as tar:
+                dup_filter = create_tar_duplicate_filter()
+                tar.add(os.path.join(self.src_dir, 'plugin-files'), arcname=leaf_dir, filter=dup_filter)
+
+                for whl_file_name in os.listdir(download_target_wheelhouse):
+                    tar.add(os.path.join(download_target_wheelhouse, whl_file_name),
+                            arcname=os.path.join(leaf_dir, 'wheelhouse', whl_file_name),
+                            filter=dup_filter)
+
+            return ()  # Builds package in place, no need to copy
+
+
+
+def create_tar_duplicate_filter():
+    files_seen = set()
+
+    def do_filter(tar_info):
+        if tar_info.name in files_seen:
+            return None
+        files_seen.add(tar_info.name)
+        return tar_info
+    return do_filter
 
 
 def get_plugin_output_dir(cmdline_args):
