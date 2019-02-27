@@ -716,7 +716,6 @@ class PythonComponent(MpfComponent):
             download_target_wheelhouse = os.path.join(temp_path, 'wheelhouse')
 
             pip_args = ['pip', 'wheel', self.src_dir,
-                        '--process-dependency-links',
                         '--wheel-dir', download_target_wheelhouse,
                         '--find-links', PipUtil.get_sdk_wheelhouse()]
 
