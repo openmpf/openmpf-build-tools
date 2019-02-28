@@ -514,6 +514,21 @@ class MavenUtil(object):
 
 
 class PipUtil(object):
+    _VERSION_VERIFIED = False
+
+    @staticmethod
+    def verify_version():
+        if PipUtil._VERSION_VERIFIED:
+            return
+        # Example: pip 8.1.2 from /usr/lib/python2.7/site-packages (python 2.7)
+        version_output = subprocess.check_output(['pip', '--version'])
+        version_string = version_output.split()[1]
+        major_version = int(version_string.split('.')[0])
+        if major_version < 9:
+            raise Exception('pip version 9 or greater is required, but found version: %s' % version_output)
+        PipUtil._VERSION_VERIFIED = True
+
+
     @staticmethod
     def has_setup_py_file(src_dir):
         return Files.path_exists(src_dir, 'setup.py')
@@ -610,6 +625,7 @@ class PythonSdk(MpfProject):
         super(PythonSdk, self).__init__(
             os.path.join(cmdline_args.python_sdk_src, 'detection')
         )
+        PipUtil.verify_version()
         self.packages = [os.path.join(self.src_dir, d) for d in ('api', 'component_util')]
         for package in self.packages:
             if not PipUtil.has_setup_py_file(package):
@@ -702,6 +718,7 @@ class JavaComponent(MpfComponent):
 class PythonComponent(MpfComponent):
     def __init__(self, component_src_dir, cmdline_args):
         super(PythonComponent, self).__init__(component_src_dir, cmdline_args)
+        PipUtil.verify_version()
 
     def build_package(self):
         if PipUtil.has_setup_py_file(self.src_dir):
