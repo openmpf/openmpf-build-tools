@@ -23,11 +23,38 @@
 # limitations under the License.                                            #
 #############################################################################
 
+#############################################################################
+# Warning: Use at your own discretion, this file may be out of date         #
+#############################################################################
+
 FROM centos:7.4.1708
 
-################################################################################	
-# Build Audio and Video Codecs and FFmpeg                                      #	
-################################################################################
+# Set up yum repo:
+RUN yum install -y epel-release deltarpm && yum update -y && \
+    yum install -y git wget gcc gcc-c++ make autoconf automake \
+    libtool yasm nasm bzip2 cmake3 file openssl-devel && \
+    yum clean all
+
+# Create the OpenMPF ldconfig file:
+# Add /apps/install/lib to the OpenMPF ldconfig file:
+# Update the shared library cache:
+RUN touch /etc/ld.so.conf.d/mpf-x86_64.conf && \
+    sh -c 'echo "/apps/install/lib" >> /etc/ld.so.conf.d/mpf-x86_64.conf' && \
+    ldconfig
+
+RUN mkdir -p /apps/source/ffmpeg_sources
+
+# cmake 2.8.12.2:
+RUN mkdir -p /apps/source/cmake_sources && \
+    wget -nv -O /apps/source/cmake_sources/cmake-2.8.12.2.tar.gz \
+    "https://cmake.org/files/v2.8/cmake-2.8.12.2.tar.gz" && \
+    cd /apps/source/cmake_sources && tar xzf cmake-2.8.12.2.tar.gz && \
+    cd cmake-2.8.12.2 && chmod +x * && ./configure --prefix=/apps/install && make -j && \
+    make install && ldconfig && ln -s /apps/install/bin/cmake /usr/local/bin/cmake
+
+#############################################################################
+# Build Audio and Video Codecs and FFmpeg                                   #
+#############################################################################
 
  # opencore-amr:	
 RUN wget -nv -O /apps/source/ffmpeg_sources/opencore-amr-0.1.4.tar.gz \	
@@ -132,3 +159,8 @@ RUN cd /apps/source/ffmpeg_sources && git clone https://git.ffmpeg.org/ffmpeg.gi
     --extra-ldflags="-L/apps/install/lib" --extra-libs=-ldl --prefix="/apps/install" && \	
     make -j$(nproc) && make install && make distclean && ln -s /apps/install/bin/ffmpeg /usr/bin/ffmpeg && \	
     ldconfig
+
+RUN ln -s /apps/install/bin/ffserver /usr/bin/ffserver && \
+    ln -s /apps/install/bin/ffprobe /usr/bin/ffprobe
+
+ENTRYPOINT [ "/bin/bash" ]
