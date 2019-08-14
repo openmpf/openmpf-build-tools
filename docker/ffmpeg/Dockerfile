@@ -27,10 +27,10 @@
 # Warning: Use at your own discretion, this file may be out of date         #
 #############################################################################
 
-FROM centos:7.4.1708
+FROM centos:7
 
 # Set up yum repo:
-RUN yum install -y epel-release deltarpm && yum update -y && \
+RUN yum install -y epel-release deltarpm && \
     yum install -y git wget gcc gcc-c++ make autoconf automake \
     libtool yasm nasm bzip2 cmake3 file openssl-devel && \
     yum clean all
