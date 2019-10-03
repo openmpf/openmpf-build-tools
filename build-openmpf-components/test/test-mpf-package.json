@@ -49,8 +49,8 @@
             "path": "../../openmpf-components/java/SphinxSpeechDetection"
         },
         {
-            "name": "OcvDnnComponent",
-            "path": "../../openmpf-components/cpp/OcvDnnComponent"
+            "name": "OcvDnnDetection",
+            "path": "../../openmpf-components/cpp/OcvDnnDetection"
         },
         {
             "name": "DarknetDetection",
