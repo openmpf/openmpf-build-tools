@@ -75,7 +75,7 @@ def print_argument_warnings(cmdline_args):
 
 def clean(base_build_dir, projects):
     for base_package in Files.list_component_packages(base_build_dir):
-        print 'Deleting', base_package
+        print('Deleting', base_package)
         os.remove(base_package)
 
     for build_dir in Files.dir_children(base_build_dir):
@@ -88,7 +88,7 @@ def clean(base_build_dir, projects):
 def print_warning(msg):
     yellow = '\033[0;33m'
     reset = '\033[0m'
-    print yellow + msg + reset
+    print(yellow + msg + reset)
 
 
 class MpfArgumentParser(argparse.ArgumentParser):
@@ -449,7 +449,7 @@ class ProjectBuilder(object):
             plugin_output_dir = get_plugin_output_dir(cmdline_args)
             Files.make_dir(plugin_output_dir)
             builder.build(components)
-            print 'Component packages written to:', plugin_output_dir
+            print('Component packages written to:', plugin_output_dir)
 
 
 
@@ -472,10 +472,10 @@ class CmakeUtil(object):
     @staticmethod
     def clean(build_dir):
         if Files.path_exists(build_dir, 'makefile') or Files.path_exists(build_dir, 'Makefile'):
-            print 'Cleaning', build_dir
+            print('Cleaning', build_dir)
             subprocess.check_call(('make', 'clean'), cwd=build_dir)
             for package in Files.list_component_packages(build_dir):
-                print 'Deleting', package
+                print('Deleting', package)
                 os.remove(package)
 
     @staticmethod
@@ -508,7 +508,7 @@ class MavenUtil(object):
     @staticmethod
     def clean(src_dir):
         if MavenUtil.is_project(src_dir):
-            print 'Cleaning ', src_dir
+            print('Cleaning ', src_dir)
             subprocess.check_call(('mvn', 'clean'), cwd=src_dir)
 
 
@@ -520,8 +520,9 @@ class PipUtil(object):
     def verify_version():
         if PipUtil._VERSION_VERIFIED:
             return
-        # Example: pip 8.1.2 from /usr/lib/python2.7/site-packages (python 2.7)
-        version_output = subprocess.check_output(['pip', '--version'])
+        # Example: pip 8.1.2 from /usr/local/lib/python3.8/site-packages/pip (python 3.8)
+        proc_result = subprocess.run(['pip3', '--version'], check=True, capture_output=True, text=True)
+        version_output = proc_result.stdout
         version_string = version_output.split()[1]
         major_version = int(version_string.split('.')[0])
         if major_version < 9:
@@ -549,7 +550,7 @@ class PipUtil(object):
     @staticmethod
     def clean(src_dir):
         if PipUtil.has_setup_py_file(src_dir):
-            print 'Cleaning ', src_dir
+            print('Cleaning ', src_dir)
             subprocess.check_call(('python', 'setup.py', 'clean'), cwd=src_dir)
 
     @staticmethod
@@ -567,9 +568,7 @@ class PipUtil(object):
 
 
 
-class MpfProject(object):
-    __metaclass__ = abc.ABCMeta
-
+class MpfProject(abc.ABC):
     def __init__(self, src_dir):
         self.src_dir = os.path.abspath(Files.expand_path(src_dir))
 
@@ -589,7 +588,7 @@ def get_sdks(cmdline_args):
         if cmdline_args.python_sdk_src:
             sdks.append(PythonSdk(cmdline_args))
     except Exception as err:
-        sys.exit('Error: ' + err.message)
+        sys.exit('Error: ' + str(err))
     return sdks
 
 
@@ -635,16 +634,15 @@ class PythonSdk(MpfProject):
 
     def build(self):
         for package in self.packages:
-            subprocess.check_call(('pip', 'wheel', '--wheel-dir', PipUtil.get_sdk_wheelhouse(),
+            subprocess.check_call(('pip3', 'wheel', '--wheel-dir', PipUtil.get_sdk_wheelhouse(),
                                    '--find-links', PipUtil.get_sdk_wheelhouse(), package))
 
-            subprocess.check_call(('pip', 'install', '--upgrade', '--target', PipUtil.get_sdk_installed_packages(),
+            subprocess.check_call(('pip3', 'install', '--upgrade', '--target', PipUtil.get_sdk_installed_packages(),
                                    '--find-links', PipUtil.get_sdk_wheelhouse(), package))
 
 
 
-class MpfComponent(MpfProject):
-    __metaclass__ = abc.ABCMeta
+class MpfComponent(MpfProject, abc.ABC):
 
     @staticmethod
     def create(src_dir, cmdline_args):
@@ -732,7 +730,7 @@ class PythonComponent(MpfComponent):
         with Files.create_temp_dir() as temp_path:
             download_target_wheelhouse = os.path.join(temp_path, 'wheelhouse')
 
-            pip_args = ['pip', 'wheel', self.src_dir,
+            pip_args = ['pip3', 'wheel', self.src_dir,
                         '--wheel-dir', download_target_wheelhouse,
                         '--find-links', PipUtil.get_sdk_wheelhouse()]
 
