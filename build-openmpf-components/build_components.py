@@ -456,7 +456,7 @@ class ProjectBuilder(object):
 class CmakeUtil(object):
     @staticmethod
     def is_project(src_dir):
-        return Files.path_exists(src_dir, 'CMakeLists.txt')
+        return Files.path_exists(src_dir, 'CMakeLists.txt') and not(Files.path_exists(src_dir, '.mpfdockeronly'))
 
     @staticmethod
     def build(build_dir, src_dir, num_jobs):
