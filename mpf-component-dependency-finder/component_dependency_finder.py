@@ -27,6 +27,7 @@
 #############################################################################
 
 import argparse
+import functools
 import heapq
 import json
 import multiprocessing
@@ -53,7 +54,7 @@ def main():
     else:
         registration_order = get_component_registration_order(components)
     for component in registration_order:
-        print component.path
+        print(component.path)
 
 
 def parse_args():
@@ -233,6 +234,7 @@ def create_provided_items_index(components, to_provides_fn):
     return index
 
 
+@functools.total_ordering
 class Component(object):
     PREDEFINED_ACTIONS = {'OCV GENERIC MARKUP ACTION'}
     PREDEFINED_TASKS = {'OCV GENERIC MARKUP TASK'}
@@ -270,8 +272,11 @@ class Component(object):
 
     # Object will be stored in a heap,
     # so the comparison operators need to be defined.
-    def __cmp__(self, other):
-        return cmp(self.name, other.name)
+    def __eq__(self, other):
+        return self.name == other.name
+
+    def __lt__(self, other):
+        return self.name < other.name
 
 
 
@@ -328,7 +333,7 @@ class Graph(object):
 
     def get_edges(self):
         edges = set()
-        for src_node, dest_nodes in self._adjacency_list.iteritems():
+        for src_node, dest_nodes in self._adjacency_list.items():
             for dest in dest_nodes:
                 edges.add((src_node, dest))
         return edges
@@ -338,7 +343,7 @@ class Graph(object):
 
     def predecessors(self, target_node):
         predecessors = set()
-        for src_node, dest_nodes in self._adjacency_list.iteritems():
+        for src_node, dest_nodes in self._adjacency_list.items():
             if target_node in dest_nodes:
                 predecessors.add(src_node)
         return predecessors
