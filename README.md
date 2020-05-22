@@ -48,7 +48,7 @@ anywhere on a system, so a script is required to build them all in one command.
 ### Quick Start
 * To build the C++ Component SDK, the Java Component SDK, and all components you can run:
 ```
-python build_components.py \
+python3 build_components.py \
     -b ~/mpf-component-build \
     -p 2 \
     -j 4 \
@@ -70,7 +70,7 @@ python build_components.py \
 ### Building C++ and Java Component SDKs with `build_components.py`
 * To build the C++ SDK, set `-csdk` to the path to the C++ Component SDK source code.
 * To build the Java SDK, Set `-jsdk` to the path to the Java Component SDK source code.
-* Example: `python build_components.py -csdk ~/openmpf-projects/openmpf-cpp-component-sdk -jsdk ~/openmpf-projects/openmpf-java-component-sdk`
+* Example: `python3 build_components.py -csdk ~/openmpf-projects/openmpf-cpp-component-sdk -jsdk ~/openmpf-projects/openmpf-java-component-sdk`
 
 
 ### Building Components with `build_components.py`
@@ -86,18 +86,18 @@ python build_components.py \
   [openmpf-contrib-components repo](https://github.com/openmpf/openmpf-contrib-components) can be built at multiple
   levels.
    * To build all the components in openmpf-components you can run:  
-      * `python build_components.py -c ~/openmpf-projects/openmpf-components`
+      * `python3 build_components.py -c ~/openmpf-projects/openmpf-components`
    * To only build the C++ components in openmpf-components you can run:
-      * `python build_components.py -c ~/openmpf-projects/openmpf-components/cpp`
+      * `python3 build_components.py -c ~/openmpf-projects/openmpf-components/cpp`
    * To only build the OcvFaceDetection component you can run:
-      * `python build_components.py -c ~/openmpf-projects/openmpf-components/cpp/OcvFaceDetection`
+      * `python3 build_components.py -c ~/openmpf-projects/openmpf-components/cpp/OcvFaceDetection`
 
 
 * Multiple components can be passed to the `-c` argument by separating them with colons.
    * To build OcvFaceDetection and DlibFaceDetection you can run:
-      * `python build_components.py -c ~/openmpf-projects/openmpf-components/cpp/OcvFaceDetection:~/openmpf-projects/openmpf-components/cpp/DlibFaceDetection`
+      * `python3 build_components.py -c ~/openmpf-projects/openmpf-components/cpp/OcvFaceDetection:~/openmpf-projects/openmpf-components/cpp/DlibFaceDetection`
    * To build all the components in open-components and openmpf-contrib-components you can run:
-      * `python build_components.py -c ~/openmpf-projects/openmpf-components:~/openmpf-projects/openmpf-contrib-components`
+      * `python3 build_components.py -c ~/openmpf-projects/openmpf-components:~/openmpf-projects/openmpf-contrib-components`
 
 
 
@@ -106,9 +106,9 @@ python build_components.py \
   directory is checked for a component. If there isn't a component there, each path given in `-cp` will be checked.
   Multiple paths can be passed to `-cp` by separating them with a colon.
    * To build all the components in open-components and openmpf-contrib-components you can run:
-      * `python build_components.py -cp ~/openmpf-projects -c openmpf-components:openmpf-contrib-components`
+      * `python3 build_components.py -cp ~/openmpf-projects -c openmpf-components:openmpf-contrib-components`
    * To build OcvFaceDetection, DlibFaceDetection, and MogMotionDetection you can run:
-      * `python build_components.py -cp ~/openmpf-projects/openmpf-components:~/openmpf-projects/openmpf-contrib-components -c OcvFaceDetection:DlibFaceDetection:motion/MogMotionDetection`
+      * `python3 build_components.py -cp ~/openmpf-projects/openmpf-components:~/openmpf-projects/openmpf-contrib-components -c OcvFaceDetection:DlibFaceDetection:motion/MogMotionDetection`
 
 ### Parallelism
 * The `-p` argument specifies the maximum number of components that will be built in parallel.
