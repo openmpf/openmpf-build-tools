@@ -298,7 +298,7 @@ class ComponentLocator(object):
                 missing_components.append(component_path)
 
         if missing_components:
-            sys.exit('Error: The following components were not found: '
+            sys.exit('Error: The following components were not found or invalid (e.g. Docker only): '
                      + ', '.join(missing_components))
 
         duplicate_components = ComponentLocator._get_duplicate_components(located_components)
