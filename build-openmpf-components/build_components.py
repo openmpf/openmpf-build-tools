@@ -298,7 +298,7 @@ class ComponentLocator(object):
                 missing_components.append(component_path)
 
         if missing_components:
-            sys.exit('Error: The following components were not found: '
+            sys.exit('Error: The following components were not found or invalid (e.g. Docker only): '
                      + ', '.join(missing_components))
 
         duplicate_components = ComponentLocator._get_duplicate_components(located_components)
@@ -456,7 +456,7 @@ class ProjectBuilder(object):
 class CmakeUtil(object):
     @staticmethod
     def is_project(src_dir):
-        return Files.path_exists(src_dir, 'CMakeLists.txt')
+        return Files.path_exists(src_dir, 'CMakeLists.txt') and not(Files.path_exists(src_dir, '.mpfdockeronly'))
 
     @staticmethod
     def build(build_dir, src_dir, num_jobs):
