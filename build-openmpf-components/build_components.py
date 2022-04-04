@@ -531,12 +531,13 @@ class PipUtil(object):
 
 
     @staticmethod
-    def has_setup_py_file(src_dir):
-        return Files.path_exists(src_dir, 'setup.py')
+    def is_project(src_dir):
+        return (Files.path_exists(src_dir, 'pyproject.toml')
+                or Files.path_exists(src_dir, 'setup.py'))
 
     @staticmethod
     def is_component(src_dir):
-        return PipUtil.has_setup_py_file(src_dir) or PipUtil._descriptor_lang_matches(src_dir)
+        return PipUtil.is_project(src_dir) or PipUtil._descriptor_lang_matches(src_dir)
 
     @staticmethod
     def _descriptor_lang_matches(src_dir):
@@ -549,7 +550,7 @@ class PipUtil(object):
 
     @staticmethod
     def clean(src_dir):
-        if PipUtil.has_setup_py_file(src_dir):
+        if Files.path_exists(src_dir, 'setup.py'):
             print('Cleaning ', src_dir)
             subprocess.check_call(('python', 'setup.py', 'clean'), cwd=src_dir)
 
@@ -627,10 +628,9 @@ class PythonSdk(MpfProject):
         PipUtil.verify_version()
         self.packages = [os.path.join(self.src_dir, d) for d in ('api', 'component_util')]
         for package in self.packages:
-            if not PipUtil.has_setup_py_file(package):
-                raise Exception(
-                    'Unable to build Python SDK because %s does not contain a setup.py file.'
-                    % package)
+            if not PipUtil.is_project(package):
+                raise Exception(f'Unable to build Python SDK because {package} does not contain a '
+                                f'pyproject.toml or a setup.py file.')
 
     def build(self):
         for package in self.packages:
@@ -719,7 +719,7 @@ class PythonComponent(MpfComponent):
         PipUtil.verify_version()
 
     def build_package(self):
-        if PipUtil.has_setup_py_file(self.src_dir):
+        if PipUtil.is_project(self.src_dir):
             return self._build_setuptools_component()
         else:
             Files.tar_directory(self.src_dir, self.base_plugin_output_dir)
