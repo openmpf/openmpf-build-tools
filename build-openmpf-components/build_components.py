@@ -522,7 +522,7 @@ class PipUtil(object):
         subprocess.run((cls._get_python_executable(), '-m', 'pip', *args), check=True)
 
     @classmethod
-    @functools.cache
+    @functools.lru_cache(maxsize=1)
     def _get_python_executable(cls) -> str:
         venv_root = pathlib.Path(cls._get_sdk_install_root()) / 'venv'
         executable_path = venv_root / 'bin/python3.12'
