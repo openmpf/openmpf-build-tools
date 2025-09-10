@@ -29,11 +29,13 @@
 import abc
 import argparse
 import contextlib
+import functools
 import glob
 import json
 import multiprocessing
 import multiprocessing.pool
 import os
+import pathlib
 import shutil
 import subprocess
 import sys
@@ -514,20 +516,24 @@ class MavenUtil(object):
 
 
 class PipUtil(object):
-    _VERSION_VERIFIED = False
 
-    @staticmethod
-    def verify_version():
-        if PipUtil._VERSION_VERIFIED:
-            return
-        # Example: pip 8.1.2 from /usr/local/lib/python3.8/site-packages/pip (python 3.8)
-        proc_result = subprocess.run(['pip3', '--version'], check=True, capture_output=True, text=True)
-        version_output = proc_result.stdout
-        version_string = version_output.split()[1]
-        major_version = int(version_string.split('.')[0])
-        if major_version < 9:
-            raise Exception('pip version 9 or greater is required, but found version: %s' % version_output)
-        PipUtil._VERSION_VERIFIED = True
+    @classmethod
+    def run_pip(cls, *args: str):
+        subprocess.run((cls._get_python_executable(), '-m', 'pip', *args), check=True)
+
+    @classmethod
+    @functools.lru_cache(maxsize=1)
+    def _get_python_executable(cls) -> str:
+        venv_root = pathlib.Path(cls._get_sdk_install_root()) / 'venv'
+        executable_path = venv_root / 'bin/python3.12'
+        if not executable_path.is_file():
+            if venv_root.exists():
+                raise Exception(
+                    f'Expected "{venv_root}" to either not exist or be a Python 3.12 virtualenv.')
+            print('Creating venv at:', venv_root)
+            subprocess.run(
+                    ('python3.12', '-m', 'venv', str(venv_root), '--upgrade-deps'), check=True)
+        return str(executable_path)
 
 
     @staticmethod
@@ -548,11 +554,12 @@ class PipUtil(object):
         except IOError:
             return False
 
-    @staticmethod
-    def clean(src_dir):
+    @classmethod
+    def clean(cls, src_dir):
         if Files.path_exists(src_dir, 'setup.py'):
             print('Cleaning ', src_dir)
-            subprocess.check_call(('python', 'setup.py', 'clean'), cwd=src_dir)
+            subprocess.run(
+                    (cls._get_python_executable(), 'setup.py', 'clean'), check=True, cwd=src_dir)
 
     @staticmethod
     def _get_sdk_install_root():
@@ -562,9 +569,6 @@ class PipUtil(object):
     def get_sdk_wheelhouse():
         return os.path.join(PipUtil._get_sdk_install_root(), 'wheelhouse')
 
-    @staticmethod
-    def get_sdk_installed_packages():
-        return os.path.join(PipUtil._get_sdk_install_root(), 'site-packages')
 
 
 
@@ -625,7 +629,6 @@ class PythonSdk(MpfProject):
         super(PythonSdk, self).__init__(
             os.path.join(cmdline_args.python_sdk_src, 'detection')
         )
-        PipUtil.verify_version()
         self.packages = [os.path.join(self.src_dir, d) for d in ('api', 'component_util')]
         for package in self.packages:
             if not PipUtil.is_project(package):
@@ -634,12 +637,15 @@ class PythonSdk(MpfProject):
 
     def build(self):
         for package in self.packages:
-            subprocess.check_call(('pip3', 'wheel', '--wheel-dir', PipUtil.get_sdk_wheelhouse(),
-                                   '--find-links', PipUtil.get_sdk_wheelhouse(), package))
-
-            subprocess.check_call(('pip3', 'install', '--upgrade', '--target', PipUtil.get_sdk_installed_packages(),
-                                   '--find-links', PipUtil.get_sdk_wheelhouse(), package))
-
+            PipUtil.run_pip(
+                    'wheel',
+                    '--wheel-dir', PipUtil.get_sdk_wheelhouse(),
+                    '--find-links', PipUtil.get_sdk_wheelhouse(),
+                    package)
+            PipUtil.run_pip(
+                    'install', '--upgrade',
+                    '--find-links', PipUtil.get_sdk_wheelhouse(),
+                    package)
 
 
 class MpfComponent(MpfProject, abc.ABC):
@@ -716,7 +722,6 @@ class JavaComponent(MpfComponent):
 class PythonComponent(MpfComponent):
     def __init__(self, component_src_dir, cmdline_args):
         super(PythonComponent, self).__init__(component_src_dir, cmdline_args)
-        PipUtil.verify_version()
 
     def build_package(self):
         if PipUtil.is_project(self.src_dir):
@@ -730,15 +735,14 @@ class PythonComponent(MpfComponent):
         with Files.create_temp_dir() as temp_path:
             download_target_wheelhouse = os.path.join(temp_path, 'wheelhouse')
 
-            pip_args = ['pip3', 'wheel', self.src_dir,
+            pip_args = ['wheel', self.src_dir,
                         '--wheel-dir', download_target_wheelhouse,
                         '--find-links', PipUtil.get_sdk_wheelhouse()]
 
             plugin_provided_wheelhouse = os.path.join(self.src_dir, 'plugin-files', 'wheelhouse')
             if os.path.exists(plugin_provided_wheelhouse):
                 pip_args += ('--find-links', plugin_provided_wheelhouse)
-
-            subprocess.check_call(pip_args)
+            PipUtil.run_pip(*pip_args)
 
             with tarfile.open(os.path.join(self.base_plugin_output_dir, leaf_dir + '.tar.gz'), 'w:gz') as tar:
                 dup_filter = create_tar_duplicate_filter()
